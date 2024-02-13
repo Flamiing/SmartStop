@@ -1,0 +1,45 @@
+{
+  "name": "smartstop",
+  "version": "0.1.0",
+  "description": "Program to stop WSL from the Linux Terminal",
+  "main": "smart-stop.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "files": [
+    "src",
+    "index.js"
+  ],
+  "type": "module",
+  "engines": {
+    "npm": ">=10.4.0",
+    "node": ">=20.11.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Flamiing/SmartStop.git"
+  },
+  "keywords": [
+    "SmartStop",
+    "command",
+    "line",
+    "terminal",
+    "wsl",
+    "stop",
+    "wsl",
+    "console",
+    "command"
+  ],
+  "author": {
+    "name": "Flamiing",
+    "email": "sheeponfiire@gmail.com"
+  },
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Flamiing/SmartStop/issues"
+  },
+  "homepage": "https://github.com/Flamiing/SmartStop#readme",
+  "eslintConfig": {
+    "extends": "standard"
+  }
+}
