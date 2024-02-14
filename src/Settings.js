@@ -22,7 +22,7 @@ export class Settings {
       const getSettingsStatus = await this.#_getSettings()
       if (getSettingsStatus.status === true) {
         return { status: true }
-      } else if (getSettingsStatus.missing
+      } else if (getSettingsStatus.invalidSettings
                 || (!getSettingsStatus.status
                 && getSettingsStatus.code === 'ENOENT')) {
         const createSettingsStatus = await this.#_createSettings({ status: getSettingsStatus })
@@ -44,26 +44,48 @@ export class Settings {
   }
 
   static #_validateSettings({ settings }) {
+    const validation = {
+      status: false,
+      invalidSettings: false,
+      settings: {
+        linuxDistro: true,
+        codeEditor: true,
+        winTerminal: true,
+        all: false
+      }
+    }
+
     if (!settings || (!settings.hasOwnProperty('linuxDistro')
       && !settings.hasOwnProperty('codeEditor')
       && !settings.hasOwnProperty('winTerminal'))) {
-      return { status: false, missing: "all" }
-    } else if (!settings.hasOwnProperty('linuxDistro')
+      validation.settings.all = true
+      validation.invalidSettings = true
+      return validation
+    } 
+    if (!settings.hasOwnProperty('linuxDistro')
       || !VALID_DISTROS.includes(settings.linuxDistro)) {
-      this.userSettings.codeEditor = settings.codeEditor
+      this.userSettings.linuxDistro = settings.codeEditor
       this.userSettings.winTerminal = settings.winTerminal
-      return { status: false, missing: "linuxDistro" }
-    } else if (!settings.hasOwnProperty('codeEditor')) {
-      this.userSettings.linuxDistro = settings.linuxDistro
-      this.userSettings.winTerminal = settings.winTerminal
-      return { status: false, missing: "codeEditor" }
-    } else if (!settings.hasOwnProperty('winTerminal')) {
-      this.userSettings.linuxDistro = settings.linuxDistro
-      this.userSettings.codeEditor = settings.codeEditor
-      return { status: false, missing: "winTerminal" }
+      validation.settings.linuxDistro = false
+      validation.invalidSettings = true
     }
-    this.userSettings = settings
-    return { status: true }
+    if (!settings.hasOwnProperty('codeEditor')) {
+      this.userSettings.linuxDistro = settings.linuxDistro
+      this.userSettings.winTerminal = settings.winTerminal
+      validation.settings.codeEditor = false
+      validation.invalidSettings = true
+    }
+    if (!settings.hasOwnProperty('winTerminal')) {
+      this.userSettings.linuxDistro = settings.linuxDistro
+      this.userSettings.codeEditor = settings.codeEditor
+      validation.settings.winTerminal = false
+      validation.invalidSettings = true
+    }
+    if (!validation.invalidSettings) {
+      this.userSettings = settings
+      return { status: true }
+    }
+    return validation
   }
 
   static async #_getSettings() {
@@ -75,33 +97,38 @@ export class Settings {
         console.error('Error: reading settings file failed')
         console.error(err)
       }
-      return { status: false, code: err.code }
+      return { 
+        status: false,
+        code: err.code,
+        noSettingsFound: true
+      }
     }
   }
 
   static async #_createSettings({ status }) {
-    let newSettings
-
-    switch (status.missing) {
-      case 'linuxDistro':
-        newSettings = await promptUser({ linuxDistro: false })
+    if (status.noSettingsFound || status.settings.all) {
+      this.userSettings = await promptUser({
+        linuxDistro: false,
+        codeEditor: false,
+        winTerminal: false
+      })
+    } else {
+      const newSettings = await promptUser({
+        linuxDistro: status.settings.linuxDistro,
+        codeEditor: status.settings.codeEditor,
+        winTerminal: status.settings.winTerminal
+      })
+      if (!status.settings.linuxDistro) {
         this.userSettings.linuxDistro = newSettings.linuxDistro
-        break
-      case 'codeEditor':
-        newSettings = await promptUser({ codeEditor: false })
+      }
+      if (!status.settings.codeEditor) {
         this.userSettings.codeEditor = newSettings.codeEditor
-        break
-      case 'winTerminal':
-        newSettings = await promptUser({ winTerminal: false })
+      }
+      if (!status.settings.winTerminal) {
         this.userSettings.winTerminal = newSettings.winTerminal
-        break
-      default:
-        this.userSettings = await promptUser({
-          linuxDistro: false,
-          codeEditor: false, 
-          winTerminal: false
-        })
+      }
     }
+
     console.log('New Settings:', this.userSettings)
     console.error('TODO: CREATE SETTINGS FILE')
   }
