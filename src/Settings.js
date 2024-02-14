@@ -1,13 +1,11 @@
 import { promises as fs } from 'node:fs'
-import { promptUser } from './../src/utils/getUserPreferences.js'
+import { promptUser, VALID_DISTROS } from './../src/utils/getUserPreferences.js'
 
 // Path to the settings file
-const SETTINGS_FILE_PATH = '/etc/smart-stop/settings.json'
+const SETTINGS_FILE_PATH = '/etc/Smart\ Stop/settings.json'
 
 // Path to the log in case of error
 const LOG_FILE_PATH = '/var/log/Smart\ Stop'
-
-const VALID_DISTROS = ["Ubuntu", "Debian", "kali-linux", "Ubuntu-16.04", "Ubuntu-18.04", "Ubuntu-20.04"]
 
 // Class to control the settings
 export class Settings {
@@ -17,15 +15,17 @@ export class Settings {
     winTerminal: false
   }
 
-  // TODO: Need to implement a way in which if the file exists but has wrong settings or anything missing you can change just that
+  // TODO: A log when any error is found
 
   static async setup() {
     try {
       const getSettingsStatus = await this.#_getSettings()
       if (getSettingsStatus.status === true) {
         return { status: true }
-      } else if (!getSettingsStatus.status && getSettingsStatus.code === 'ENOENT') {
-        const createSettingsStatus = await this.#_createSettings()
+      } else if (getSettingsStatus.missing
+                || (!getSettingsStatus.status
+                && getSettingsStatus.code === 'ENOENT')) {
+        const createSettingsStatus = await this.#_createSettings({ status: getSettingsStatus })
         return { status: createSettingsStatus }
       } else {
         return { status: false }
@@ -43,11 +43,33 @@ export class Settings {
     return this.userSettings
   }
 
+  static #_validateSettings({ settings }) {
+    if (!settings || (!settings.hasOwnProperty('linuxDistro')
+      && !settings.hasOwnProperty('codeEditor')
+      && !settings.hasOwnProperty('winTerminal'))) {
+      return { status: false, missing: "all" }
+    } else if (!settings.hasOwnProperty('linuxDistro')
+      || !VALID_DISTROS.includes(settings.linuxDistro)) {
+      this.userSettings.codeEditor = settings.codeEditor
+      this.userSettings.winTerminal = settings.winTerminal
+      return { status: false, missing: "linuxDistro" }
+    } else if (!settings.hasOwnProperty('codeEditor')) {
+      this.userSettings.linuxDistro = settings.linuxDistro
+      this.userSettings.winTerminal = settings.winTerminal
+      return { status: false, missing: "codeEditor" }
+    } else if (!settings.hasOwnProperty('winTerminal')) {
+      this.userSettings.linuxDistro = settings.linuxDistro
+      this.userSettings.codeEditor = settings.codeEditor
+      return { status: false, missing: "winTerminal" }
+    }
+    this.userSettings = settings
+    return { status: true }
+  }
+
   static async #_getSettings() {
     try {
       const data = await fs.readFile(SETTINGS_FILE_PATH, 'utf-8')
-      this.userSettings = data
-      return { status: true }
+      return this.#_validateSettings({ settings: JSON.parse(data) })
     } catch (err) {
       if (err.code !== 'ENOENT') {
         console.error('Error: reading settings file failed')
@@ -57,8 +79,30 @@ export class Settings {
     }
   }
 
-  static async #_createSettings() {
-    this.userSettings = await promptUser()
-    console.error('TODO: CREATE SETTINGS')
+  static async #_createSettings({ status }) {
+    let newSettings
+
+    switch (status.missing) {
+      case 'linuxDistro':
+        newSettings = await promptUser({ linuxDistro: false })
+        this.userSettings.linuxDistro = newSettings.linuxDistro
+        break
+      case 'codeEditor':
+        newSettings = await promptUser({ codeEditor: false })
+        this.userSettings.codeEditor = newSettings.codeEditor
+        break
+      case 'winTerminal':
+        newSettings = await promptUser({ winTerminal: false })
+        this.userSettings.winTerminal = newSettings.winTerminal
+        break
+      default:
+        this.userSettings = await promptUser({
+          linuxDistro: false,
+          codeEditor: false, 
+          winTerminal: false
+        })
+    }
+    console.log('New Settings:', this.userSettings)
+    console.error('TODO: CREATE SETTINGS FILE')
   }
 }

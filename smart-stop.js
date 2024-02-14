@@ -8,8 +8,8 @@ import { Settings } from './src/Settings.js'
 
 async function main() {
   const settingsStatus = await Settings.setup()
-  if (!settingsStatus.status) return 1
-
+  if (!settingsStatus.status) process.exit(1)
+  process.exit(0)
 }
 
 await main()

@@ -1,6 +1,6 @@
 import rl from 'node:readline'
 
-const VALID_DISTROS = ["Ubuntu", "Debian", "kali-linux", "Ubuntu-16.04", "Ubuntu-18.04", "Ubuntu-20.04"]
+export const VALID_DISTROS = ["Ubuntu", "Debian", "kali-linux", "Ubuntu-16.04", "Ubuntu-18.04", "Ubuntu-20.04"]
 
 let userSettings = {
   linuxDistro: "",
@@ -31,9 +31,11 @@ async function getCodeEditor() {
   // TODO: Add link to explanation of where to find the name of the code editor
   const editor = await askQuestion(`IMPORTANT:
 If you use WSL within your code editor, we need to also kill the code editor process.
-In order to do this you need to go to 'Task Manager', go to 'Details' and find your
-code editor's process name. Finally input it into the terminal.`)
+In order to do this you need to go to 'Task Manager', then 'Details' and find your
+code editor's process name. Finally input it into the terminal.
+(If you don't use a code editor type 'null')`)
 
+  if (editor.toLowerCase() == 'null') return null
   return editor
 }
 
@@ -52,23 +54,27 @@ Please indicate with 'true' if you use it and 'false' if you don't.`)
   }
 }
 
-export async function promptUser(distro=true, codeEditor=true, winTerminal=true) {
+export async function promptUser({ linuxDistro=true, codeEditor=true, winTerminal=true }) {
   console.log(`ATENTION:\nConfig file needs to be created.
 Next we are going to ask you for your preferences.
 --------------------------------------------------`)
 
 
-  if (distro) {
+  if (!linuxDistro) {
     userSettings.linuxDistro = await getDistro()
+    console.log()
   }
-  if (codeEditor) {
+  if (!codeEditor) {
     userSettings.codeEditor = await getCodeEditor()
+    console.log()
   }
-  if (winTerminal) {
+  if (!winTerminal) {
     userSettings.winTerminal = await getWinTerminal()
+    console.log()
   }
 
   readline.close();
+  //console.log(userSettings)
   return userSettings
 }
 
